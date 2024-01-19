@@ -1,0 +1,318 @@
+# Queue Services
+
+## Storage Account Queue Service
+
+We will have a connection string
+you will use storage account connection string for queue
+and then queue name with QueueClient class
+
+### Peek
+
+will not remove the message from the queue, will return PeekMessages
+
+### Receive
+
+Will not remove the message but it will increase dequeue number in the queue, will return QueueMessage application will be responsible to delete the message with popReceipt from the message object.
+
+**Azure function can be trigger by Queue with QueueTrigger attribute and we can just access .Net type as a input parameter even if they have been serialized like json**
+
+**Azure function excepts message in the base64 encrypted format
+You can have [return: Table("tablename")] in your function to write data from queue for example to table storage just function needs to return TableOrder object another .NET type with partitionkey and rowkey so obviously the function needs to have return type of TableOrder**
+
+**Another way of writing object to Table storage using [Table("tablename", ConnectionString ="") ICollector<TableOrder> tableCollector] and then adding the tableorder object to the tableCollector object**
+
+## Azure Service bus
+
+Fully managed enterprise message brokers
+
+we could use Azure Service Bus Queue or Topic
+Queue is only one instance per service but topic can be multiple and each service subscribe to the topic and we will have filter rules to populate each topic with the relavant messages
+
+**you will need to have standard pricing tier to have topic feature avaiable**
+
+**Azure service bus receive function will delete the message as well**
+
+In the Service bus queue you can create Shared access policies with which you can get the keys and connection string generated for the queue
+
+you can create ServiceBusSender object with ServiceBusClient
+and you can send message in a batch
+
+we create ServiceBusMessageBatch with ServiceBusSender object and add each message to hte ServiceBusMessageBatch object
+
+**To receive of peek the messages you will need to create ServiceBusReceiver object from ServiceBusClient object**
+
+you can create **ServiceBusProcess** object with ServiceBusClient and create event handler for ProcessMessageAsync and ProcessErrorAsync evnets
+and StartProcessingAsync and StopProcessingAsync
+
+### Message Lock Duration
+
+When it comes to processing messages we have two options receive and delete and peek and lock with the receive and delete as soon as the message gets picked by any app it will be deleted from the queue but with the peek and lock it will not be deleted when it gets picked up but will be locked for certain amount of time and it cannot be read by other applications until the lock period is passed
+
+**With the peek and lock receive mode you will need to call CompleteMessage to delete the message once the processing the message is done**
+
+### Time to live of the message
+
+the default value is 14 days but you can set it at message level to 30 seconds for example by default dead lettering functionality is disabled on expired messages but you can enable it and it means once the message is expired on the queue time to live period passes it will end up in the dead letter queue
+
+you need to put "{queuename}/$DeadLetterQueue" in the queue name to read the dead letter queue and connection string is also need to be updated accordingly
+
+### Duplicate message detection
+
+you need to use application properties like message id at the application level not at the service level which is managed by the service bus
+and with that custom application property you can identity duplicate message in a specific time window
+
+you can set this functionality only we you create the queue and it is not accessible after the queue has been created
+
+### Storage Queue vs Service Bus Queues
+
+Service bus offer more options with message management like duplication detection
+
+#### Storage queye
+
+1-if application stores over 80 gigabyte of messages in a queue
+2-you application wants to track progress for processing a message in the queue, if the worker processing the message crashes another worker can use the information and continue from where the prior worker left off
+3-you require server side logs of all the transactions executed against your queues
+
+#### Service bus
+
+You solution needs to receive messages without having to poll the queue. with the service bus you can achive this by using long-polling recieve operation using the TCP-based protocols that service bus supports
+
+you application needs to provide a guaranteed FIFO ordered delivery
+
+automatic duplicate detection
+transactional behavior for sending and receiving multiple messages
+
+##### Service bus topic
+
+publish / subscribe pattern
+for the topic you will need to have subscription and applications need to subscribe to the topic
+
+When the message is sent to the topic each subscription will receive the message
+
+##### Topic filter
+
+with the help of filters, subscribers can decide which messages they want to receive
+
+In order to send a message to the topic you will use the topic name.
+
+In order to receive the message in the topic you will need to provide topic name and the subscription name
+
+##### Filter types
+
+Boolean Filter implemented by SQL filter
+SQL Filter
+Correlation Filter : more efficient than SQL Filter
+
+There is a default SQL Filter 1=1 on the subsription upon creation
+
+**In order to use user defined properties you will use user.propertyname and for the system defined filters you can use sys.filtername in your SQL filters**
+
+#### Using Azure Funtion app with Azure Service bus
+
+you will need to modify the connection string provided by SharedAccessKey section of the azure service bus queue and remove the EntityPath
+
+In the Azure function app you can change the input parameter on the function's run method from string to Message type
+
+## Azure Event Hub
+
+This is a big data streaming platform
+This service can recieve and process millions of events per second
+you can stream log data, telemetry data, any sort of events to Azure Event Hubs
+
+### How it works
+
+There are Event Producers that can be configured to send data to the Azure Event Hubs
+
+Azure Event Hub uses partitions to increase the throughput of the service and take data from different sources
+
+Then you have event receivers that can take the events from the event hub and do what they want with the event
+
+1- Event Producers
+2- Partitions improve the throughput of your data into Azure Event Hub
+3- Consumer Groups this is a view (state, position or offset) of an entire event hub
+4- Throughput this controls the throughput capacity of Event Hubs
+5- Event Receivers this is an entity that read the data
+
+### Create event hub
+
+you will need to create event hub namespace first while it shows that you are creating event hub
+
+Once you have event hub namespace in place you can go ahead and create your event hub
+
+you **Cannot** send data to event hub via azure portal you need an app for that.
+
+you will need to have event hub connection string and event hub name to connect to the evnet hub you will need to go to **Shared Access Policy** to create a policy with which we will get the connection string
+
+#### Sending data to event hub
+
+1-You will create EventHubProducerClient
+2-EventDataBatch with EventHubProducerClient
+3-You then use the entity and convert it to Json and get the bytes of the json format
+4-Add EventData object to EventDataBatch object and use producer client to send event data batch object
+
+#### Reading data from event hub
+
+1- You will create a new policy with Listen ticked with which we will get the connection string to the event hub
+2- There is a default consumer group called $Default
+3- Create EventHubConsumerClient with connection string and consumer group
+4- Get all the partitionIds with the EventHubConsumerClient
+5- In order to read the data you can use ConcellationTokenSource with which you can cancel the operation after a certain amount of time
+6- Call ReadEventsAsync method of the EventHubConsumerClient and passing the cancellationToken object
+7- It will return PartitionEvent objects so you can loop through and get partition object and Data object and DataObject.EventBody that can be converted to string
+8- Event does not get deleted after reading There is a message retention here as well
+9- Application needs to keep track of events being read.
+
+**You can read events from a particular partition**
+
+#### EventProcessorClass
+
+EventProcessor has a built in capabilities that keep track of the last position of the data it has read the data from, so if the application crashes it know where to resume reading the data.
+
+you will
+1- Connection string, consumer group and blobConnectionString as event hub uses storage blob to keep track of the processed messages.
+2- BlobContainerClient
+3- EventProcessingClient with eventhub policy connection string and consumer group
+
+#### Troughput Unit Capacity
+
+Ingress Up to 1 MB per second or 1000 events per second
+Egress Up to 2 MB per second or 4096 events per second
+
+You can increase the throughput units to increase amount of the capacity of the events hub
+
+#### Partition
+
+You can define your partition number when you are creating the hub and it cannot change unless you are using dedicated cluster or premium tier
+
+Recommended throughput of 1MB per partition
+you can also mention which property of your data is your partition key
+Event hub will hash the value and map the event to the relevent partition
+
+#### Recommendations
+
+One Receiver Per Partition
+
+you can have 5 concurrent readers per partition per consumer group
+1 partition ---> 5 reader apps ----> 1 consumer group
+
+It is possible that particular message get read by two readers and we need to avoid it
+
+#### Capture feature
+
+You will need to have standard tier for this feature
+Automatically enables streaming data into Azure Blob Storage or Azure Data Lake Store Account
+
+#### Streaming diagnostics data from other resources to hub
+
+Select Azure SQL go to the diagnostic settings select Logs or metrics and select the destination which is event hub
+
+#### Azure Event Grid
+
+You can create an application with event-based architecture
+You can write some code to response to the events like a resource has been created
+Another example is when an image gets uploaded to the Azure blob storage and you can run some code
+
+We will have a lot of Azure resources as a event source and Event Grid will receive those events and you will have Event Handler like Functions, WorkFlow and other Services as a handler
+
+You can create a function with Azure Event Grid Trigger will create a function app with EventGridTrigger input parameter
+
+you can trigger a function with blog storage or event grid and create a subscription for the blob creation / deletion event and use event grid trigger to run the function
+
+Blob storage trigger starts a function when new or updated blob is detected and blob contents are provided as input to the function
+
+With event grid you can support alot of different events and create subscription for those events
+
+Consumption plan can cause latency
+
+Use Event Grid for high scale events like processing more than 100 000 blob or 100 blob update per second
+
+#### Copy blob to a new container
+
+you can add new input parameter in the function with [Blob("*containername/{name}" , FileAccess.ReadWrite)] BlobClient newBlob
+you will need install azure.blog.storage extension version of 5 or higher to get access to the blobclient as another parameter in you function
+with the new input which is blobclient you can simply call upload method and pass the input stream object.
+
+** You can go to the Events Section on the storage account and create Event Subscription**
+
+### Debug Event Grid locally
+
+You will need to choose WebHook for local function app debuging on the Event Subscription Creation page
+
+you will need to use another software called ngrok to make it possible for the event grid to connect to the function running on local machine
+
+Ngrok will make your local url available in the internet
+
+you will need to get authentication token from the ngrok website
+
+Once you set the authentication token you can
+
+you can start a Http tunnel forwarding to your local port 80 like
+_ngrok http 80_
+
+you will get a new url and all your requests to localhost will be forwarded to new url on the ngrok.io domain
+
+and use the Endpoint details with Webhook type with a subscriber to the newly created Url with ngrok domain and adding the following path https://_domain_/runtime/webhooks/eventgrid
+after these configuration any event in the Azure can be trigger the function running locally.
+
+### Azure queue storage as a consumer of the event in the event grid
+
+You can create Event Subscriptions on **ResourceGroup** resource and specify your endpoint type that can be queue storage
+
+Which means anytime storage account gets deleted an event will be raised and it will be hit the endpoint specified in the event subscriptions
+
+so you will need to
+1- A resource which has got some inherint events
+2- Then you can create subscriptions for those events on the same resource
+3- Specify the endpoint for those events you can choose Storage Queey for your Endpoint type for example and specify the queue storage account itself.
+
+So your events on the resource group like resource group deleted will end up in the queue storage without having to have a function in the middle to process the event.
+
+#### Filter Storage account events with subject
+
+Subject is usuallly a full path of the container and files and you can filter the events sent to the Event Grid with Subject Start with and End with.
+
+You can use Http trigger with your function to consume the events
+your function needs to handshake with the event grid first
+with validation code and returning the validation code back with validation url.
+
+You can create your own custom topic with event grid
+
+### API Management
+
+You will need to have your API deployed to Azure services like App Services
+When you define your API you will add your base Url and you only need to add the relative URL for the operations of the API.
+
+**First level security is the subscription key you will need to add the following key to the header
+Ocp-Apim-Subscription-Key and add the key value**
+
+You can allow or deny traffic to the Web API deployed to the App services with Access Restriction
+0.0.0.0/0 is the all ip address and ipv4 ranges
+
+You can use Create from OpenAPI specification to publish APIs with Swagger definitions
+
+#### IP restriction with Policy
+
+you can use xml snippet like ip-filter to allow or deny certain IP addresses
+
+you can also use expression with C# languages in the xml snippets
+
+#### Rewrite URL
+
+you can get the query string and use it as a path in your rewrite URL snippet with C# code
+
+#### Cache
+
+if you are using consumption tier you can only use external caching but with the developer tier you can get up to 10M internal cache
+
+#### you can use OAuth 2.0 + OpenID Connect
+
+you create a app registration for your API and expose it which creates scope (Application ID URI)
+
+you can go to the Endpoints section of the app registered in AD and get the Authorization Endpoint and token Endpoint
+and set the APIM with those Endpoints
+
+**You will need to create client secret if you are using Postman**
+
+you will then set **Authentication** section of the app registered in AD with selecting the platform (Web) and then redirected Url provided by APIM will be set on the platform.
+
+Then you will need to add validate-jwt xml snippet in the inbound policy.
