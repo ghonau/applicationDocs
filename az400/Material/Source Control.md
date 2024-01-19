@@ -11,3 +11,5 @@ will need a Subversion server software and Subversion client on the developer's 
 # Add files to Staging Area
 
 2- git add: will add your file into Staging Area and now they are tracked by Git, you can call your files are staged
+
+Just changing the file
