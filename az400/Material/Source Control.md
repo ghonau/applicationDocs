@@ -22,4 +22,6 @@ git log --all
 #In order to attach head to main branch
 git checkout main
 #How to unstage and keep the changes in the working directory
-git rm az400/Material/Source control.md
+git rm --cached "az400/Material/Source control.md"
+#How to create a new branch
+git checkout -b featureB
