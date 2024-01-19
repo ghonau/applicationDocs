@@ -16,3 +16,10 @@ Just changing the file
 
 #How to go back to a previous commit
 git checkout {commit_id}
+#How to show all the commit
+git log --all
+#Unstage file
+#In order to attach head to main branch
+git checkout main
+#How to unstage and keep the changes in the working directory
+git rm az400/Material/Source control.md
