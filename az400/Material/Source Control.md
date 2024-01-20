@@ -25,3 +25,8 @@ git checkout main
 git rm --cached "az400/Material/Source control.md"
 #How to create a new branch
 git checkout -b featureB
+#Remote repositories
+
+You could use GitHub or Azure repos for the remote repository and developer can clone the code and then make some changes and merge the changes back to the main repository
+
+#Pushing to GitHub
