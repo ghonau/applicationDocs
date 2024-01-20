@@ -33,3 +33,5 @@ You could use GitHub or Azure repos for the remote repository and developer can 
 1- you will need to create a remote repository
 2- add remote origin to your local git repository
 3- push your change to the remote repository
+#Fast forward
+Make some changes onto feature brach and main branch will point to the ONLY latest commit on the feature branch (we do not want the history of commits on the feature branch).
