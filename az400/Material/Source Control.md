@@ -36,3 +36,17 @@ You could use GitHub or Azure repos for the remote repository and developer can 
 #Fast forward
 Make some changes onto feature brach and main branch will point to the ONLY latest commit on the feature branch (we do not want the history of commits on the feature branch).
 Updated1
+
+#Main Branch
+1- Always keep high quality there
+2- Container workiing copy of the production
+3- Create feature branches for your features and bug fixes
+4- Use pull requests to merge your feature branches into your main branch
+5- Do not create long-lived feature branches keep them short-lived.
+
+#Azure Reps
+You can use **git push -u origin --all** to push all the branches (even new branches) to remote repository.
+
+you can import Git repository into Azure DevOps repo
+
+you still need to commit .gitignore file into local and remote repositories
