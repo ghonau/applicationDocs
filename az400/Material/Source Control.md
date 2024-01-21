@@ -35,4 +35,4 @@ You could use GitHub or Azure repos for the remote repository and developer can 
 3- push your change to the remote repository
 #Fast forward
 Make some changes onto feature brach and main branch will point to the ONLY latest commit on the feature branch (we do not want the history of commits on the feature branch).
-Updated
+Updated1
